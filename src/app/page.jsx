@@ -1,37 +1,113 @@
-import { ChartArea, ChartColumnBig, Search } from "lucide-react";
+"use client";
+
+import { ChartColumnBig, Filter, Search } from "lucide-react";
 import assets from "../database/assets.json"
+import { useEffect, useState } from "react";
+import useDebounce from "@/hooks/useDebounce";
 
 export default function Home() {
-    // Calculate dashboard stats
+  const [inputValue, setInputValue] = useState("");
+  const [type, setType] = useState("All Types");
+  const [sort, setSort] = useState("All");
+  const [min, setMin] = useState(0);
+  const [max, setMax] = useState("");
+
+  const query = useDebounce(inputValue, 600);
+  const filteredAssets = assets.filter((asset)=> {
+    const matchesSearch = asset.name.toLowerCase().includes(query) ||
+    asset.symbol.toLowerCase().includes(query);
+
+    const matchesType = type === "All Types" || asset.type === type;
+
+    const matchesMin = asset.price >= (min || 0);
+    const matchesMax = max ? asset.price <= Number(max) : true;
+
+    let matchesSort = true;
+    if (sort === "gainers") matchesSort = asset.change24h > 0;
+    else if (sort === "losers") matchesSort = asset.change24h < 0;
+
+    return matchesSearch && matchesType && matchesMin && matchesMax && matchesSort;
+  });
+
   const totalMarketCap = assets.reduce((sum, asset) => sum + asset.value, 0);
   const totalVolume24h = assets.reduce((sum, asset) => sum + Math.abs(asset.change24h * asset.value) / 100, 0); // mock volume as % of value
-  const gainers = assets
-    .filter(asset => asset.change24h > 0)
-  const losers = assets
-    .filter(asset => asset.change24h < 0)
+  const gainers = assets.filter((asset) => asset.change24h > 0)
+  const losers = assets.filter((asset) => asset.change24h < 0)
+
+
 
   return (
     <main className="bg-black h-screen w-full">
-      <div className="max-w-[80rem] mx-auto my-4 px-4">
-        <h1 className="text-2xl font-medium">The Real-Time Assets Dashboard</h1>
-        <div className="mt-4 flex border-white/30 border-1 ring-white/60 focus:ring-1 rounded-md bg-[#0A0A0A]">
-          <span className="text-white/30 w-[42px] h-[42px] flex items-center justify-center"><Search /></span>
-          <input 
-            type="text" 
-            placeholder="Search Assets..."
-            className="w-full p-2 rounded-lg outline-none text-sm"/>
+      <div className="max-w-[90rem] mx-auto py-4 px-4">
+        <div className="flex items-center justify-start gap-2">
+          <div className="bg-white p-3 rounded-md text-gray-800">
+            <ChartColumnBig size={24}/>
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Assets Dashboard</h1>
+            <p className="text-base font-medium text-white/80">Real-Time Assets Dashboard</p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 mt-4">
-          <StatusCard title={"Total Market Cap"} data={totalMarketCap.toLocaleString()}/>
-          <StatusCard title={"24h Volume"} data={totalVolume24h.toLocaleString()}/>
-          <StatusCard title={"Total Gainers"} data={`${gainers.length} /${assets.length}`}/>
-          <StatusCard title={"Total Losers"} data={`${losers.length} /${assets.length}`}/>
-         </div>
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="flex w-full border-gray-100/20 border-1 focus:ring-white focus:ring-1 rounded-md bg-[#0A0A0A]">
+            <span className="text-white/30 w-[42px] h-[42px] flex items-center justify-center"><Search /></span>
+            <input 
+              type="text" 
+              value={inputValue}
+              onChange={(e)=>setInputValue(e.target.value)}
+              placeholder="Search Assets..."
+              className="w-full p-2 rounded-lg outline-none text-sm"/>
+          </div>
+          <button className="bg-[#0A0A0A] rounded-md h-[42px] w-[42px] flex items-center justify-center border-1 border-gray-100/20 cursor-pointer">
+            <Filter size={20}/>
+          </button>
+        </div>
 
-        <div>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 gap-y-4 rounded-md mt-4">
-            {assets.map((asset) => (
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <div className="flex gap-4">
+            <select value={type} onChange={(e)=>setType(e.target.value)} name="assetType" id="assetType" className="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm">
+              <option value="All Types">All Types</option>
+              <option value="Stock">Stock</option>
+              <option value="Crypto">Crypto</option>
+              <option value="ETF">ETF</option>
+              <option value="Commodity">Commodity</option>
+              <option value="Stablecoin">Stablecoin</option>
+            </select>
+
+            <select value={sort} onChange={(e)=>setSort(e.target.value)} name="movers" id="movers" className="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm">
+              <option value="all">All</option>
+              <option value="gainers">Top Gainers</option>
+              <option value="losers">Top Losers</option>
+            </select>
+
+            <div className="flex gap-1">
+              <input min={0} value={min} onChange={(e)=>setMin(e.target.value)} type="number" placeholder="Min $" className="w-20 bg-white text-gray-800 px-2 py-1.5 rounded-md text-sm"/>
+              <input min={0} value={max} onChange={(e)=>setMax(e.target.value)} type="number" placeholder="Max $" className="w-20 bg-white text-gray-800 px-2 py-1.5 rounded-md text-sm"/>
+            </div>
+          </div>
+          <button className="bg-white/90 text-gray-800 px-3 py-1.5 rounded-md cursor-pointer hover:bg-white transition-colors duration-200">
+            Apply Filters
+          </button>
+        </div>
+        
+
+
+        <div className="mt-6">
+          <h2 className="text-white/80 text-sm">Quick Status</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 mt-2">
+            <StatusCard title={"Total Market Cap"} data={totalMarketCap.toLocaleString()}/>
+            <StatusCard title={"24h Volume"} data={totalVolume24h.toLocaleString()}/>
+            <StatusCard title={"Total Gainers"} data={`${gainers.length} /${assets.length}`}/>
+            <StatusCard title={"Total Losers"} data={`${losers.length} /${assets.length}`}/>
+          </div>
+        </div>
+
+
+        <div className="mt-4">
+          <h2 className="text-white/80 text-sm">Assets</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 gap-y-4 rounded-md mt-2">
+            {filteredAssets.map((asset) => (
               <AssetsCard key={asset.id} asset={asset}/>
             ))}
           </div>
