@@ -45,8 +45,8 @@ export default function Home() {
     const matchesMax = max ? asset.price <= Number(max) : true;
 
     let matchesSort = true;
-    if (sort === "gainers") matchesSort = asset.change24h > 0;
-    else if (sort === "losers") matchesSort = asset.change24h < 0;
+    if (sort === "Top Gainers") matchesSort = asset.change24h > 0;
+    else if (sort === "Top Losers") matchesSort = asset.change24h < 0;
 
     return matchesSearch && matchesType && matchesMin && matchesMax && matchesSort;
   });
